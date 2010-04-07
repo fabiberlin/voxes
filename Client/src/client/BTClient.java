@@ -13,6 +13,7 @@ import shared.discovery.ServiceDiscoverer;
 import gui.GUIClient;
 import java.util.Vector;
 import shared.gui.AlertDisplayer;
+import shared.p2p.ChatService;
 
 public class BTClient {
 
@@ -26,8 +27,13 @@ public class BTClient {
     public ClientSession hubConn;
     public Publisher publisher;
     public PeerConnectionAcceptor acceptor;
-    public Vector peers;
     public LocalDevice localDevice;
+    public ChatService chatService;
+
+
+    public Vector peerDownloadConn = new Vector();
+    public Vector peerChatConn = new Vector();
+
 
     public BTClient(GUIClient gui) {
         this.gui = gui;
@@ -45,15 +51,22 @@ public class BTClient {
         hubConnector = new HubConnector(this);
         hubConn = hubConnector.connect();
         acceptor = new PeerConnectionAcceptor(this);
+        musicSearcher = new MusicSearcher(this);
+        publisher = new Publisher(this);
+        peerListRequester = new PeerListRequester(this);
+        ChatProcessor chatProcessor = new ChatProcessor(this);
+        try {
+            chatService = new ChatService(chatProcessor);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
         acceptor.start();
         if (hubConn == null) {
             AlertDisplayer.showAlert("Error", "Couldn't Connect to Hub", gui.getDisplay(), gui.getEnterBTAddressForm());
         } else {
             this.connect();
             this.disconnect();
-            musicSearcher = new MusicSearcher(this);
-            publisher = new Publisher(this);
-            peerListRequester = new PeerListRequester(this);
+            
         }
     }
 

@@ -37,11 +37,11 @@ public class PeerConnectionAcceptor extends Thread
 		try {
 			String url = "btgoep://localhost:" + uuid + ";authenticate=false;master=false;encrypt=false";
 			sn = (SessionNotifier) Connector.open(url);
-                       // btClient.gui.showAlert("opened", url, btClient.gui.getFileBrowser());
+                        //btClient.gui.showAlert("opened", url, btClient.gui.getFileBrowser());
 			while(true)
 			{
 				sn.acceptAndOpen(new FileSender(btClient));	// create a new object to enable || downloads
-                             //   btClient.gui.showAlert("accepted", url, btClient.gui.getFileBrowser());
+                                btClient.gui.showAlert("accepted", url, btClient.gui.getFileBrowser());
                         }
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

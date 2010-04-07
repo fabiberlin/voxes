@@ -40,8 +40,7 @@ public class HubConnector {
 		Vector devices = deviceDiscoverer.getDiscoveredDevices();
 		if(!devices.isEmpty())
 		{
-                   //AlertDisplayer.showAlert("DeviceFound", "A Device was Found", AlertType.INFO, 2000, this.client.gui.getDisplay(),
-                     //           this.client.gui.getHubConnection());
+                    client.gui.showAlert("DeviceFound", "A Device was Found", this.client.gui.getWelcome());
                
                     System.out.println("[client:] Few devices found that may be Hub with BT " + ((RemoteDevice) devices.elementAt(0)).getBluetoothAddress());
                         
@@ -61,8 +60,8 @@ public class HubConnector {
 				//System.out.println("[client:] Connection URL: " + connectionURL);
 				try {
 					conn = (ClientSession) Connector.open(connectionURL);
-                                    //    AlertDisplayer.showAlert("Success", "Connection Established",
-                                    //                client.gui.getDisplay(), client.gui.getHubConnection());
+                                        client.gui.showAlert("Success", "Connection Established",
+                                                    client.gui.getWelcome());
 					return conn;
 				} catch (Exception e) {
 					// TODO Auto-generated catch block

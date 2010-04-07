@@ -6,17 +6,23 @@ package gui;
 
 import client.BTClient;
 import client.HubConnector;
+import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Vector;
 import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
 
 import javax.microedition.io.file.*;
+import javax.obex.HeaderSet;
 import org.netbeans.microedition.lcdui.WaitScreen;
-
 import org.netbeans.microedition.util.SimpleCancellableTask;
 
 import p2p.FileDownloader;
+import shared.gui.AlertDisplayer;
+import shared.header.HeaderSets;
+import shared.header.Types;
+import shared.p2p.Chat;
+import shared.record.ClientRecord;
 import shared.record.FileLocation;
 
 /**
@@ -25,16 +31,16 @@ import shared.record.FileLocation;
 public class GUIClient extends MIDlet implements CommandListener {
 
     public Vector fileLocation;
+    public Vector peerListVector;
     private boolean midletPaused = false;
-    public BTClient btClient;
     //<editor-fold defaultstate="collapsed" desc=" Generated Fields ">//GEN-BEGIN:|fields|0|
-    private Command exitCommand;
+    private Command exitApplication;
     private Command screenCommand;
     private Command removeSong;
     private Command itemCommand;
     private Command screenCommand1;
     private Command screenCommand2;
-    private Command backCommand;
+    private Command backChatSendingFormComand;
     private Command backCommand1;
     private Command okCommand1;
     private Command backCommand2;
@@ -46,7 +52,7 @@ public class GUIClient extends MIDlet implements CommandListener {
     private Command okCommand4;
     private Command backCommand5;
     private Command uploadSong;
-    private Command screenCommand3;
+    private Command sendMessageCommand;
     private Command Share;
     private Command backCommand6;
     private Command okCommand;
@@ -56,28 +62,33 @@ public class GUIClient extends MIDlet implements CommandListener {
     private Command backCommand9;
     private Command downloadCommand;
     private Command connectCommand;
-    private Command preview;
+    private Command backChatListCommand;
     private List HubConnection;
-    private List list;
+    private List peerList;
     private Form form1;
     private StringItem stringItem1;
     private TextField textField;
     private Spacer spacer;
     private Spacer spacer1;
-    private Form form;
-    private StringItem stringItem;
-    private TextField textField1;
+    private Form chatSendingForm;
+    private TextField chatMessageField;
     private Spacer spacer2;
     private FileBrowser fileBrowser;
     private Form enterBTAddressForm;
     private TextField btAddressTextField;
     private List searchResults;
-    private WaitScreen connectingtohub;
     private WaitScreen waitScreen;
-    private SimpleCancellableTask task;
+    private WaitScreen Welcome;
+    private List chatList;
     private SimpleCancellableTask task1;
+    private SimpleCancellableTask task;
+    private Ticker ticker;
+    private Image image;
+    private Ticker ticker1;
+    private Image image1;
     //</editor-fold>//GEN-END:|fields|0|
     public BTClient client;
+    Chat ch = null;
 
     /**
      * The GUIClient constructor.
@@ -153,42 +164,91 @@ public class GUIClient extends MIDlet implements CommandListener {
                 // write pre-action user code here
                 HubConnectionAction();//GEN-LINE:|7-commandAction|2|24-postAction
                 // write post-action user code here
-            } else if (command == backCommand) {//GEN-LINE:|7-commandAction|3|55-preAction
+            } else if (command == backChatSendingFormComand) {//GEN-LINE:|7-commandAction|3|55-preAction
                 // write pre-action user code here
                 switchDisplayable(null, getEnterBTAddressForm());//GEN-LINE:|7-commandAction|4|55-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|5|176-preAction
-        } else if (displayable == connectingtohub) {
-            if (command == WaitScreen.FAILURE_COMMAND) {//GEN-END:|7-commandAction|5|176-preAction
+            }//GEN-BEGIN:|7-commandAction|5|189-preAction
+        } else if (displayable == Welcome) {
+            if (command == WaitScreen.FAILURE_COMMAND) {//GEN-END:|7-commandAction|5|189-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getEnterBTAddressForm());//GEN-LINE:|7-commandAction|6|176-postAction
+                switchDisplayable(null, getEnterBTAddressForm());//GEN-LINE:|7-commandAction|6|189-postAction
                 // write post-action user code here
-            } else if (command == WaitScreen.SUCCESS_COMMAND) {//GEN-LINE:|7-commandAction|7|175-preAction
+            } else if (command == WaitScreen.SUCCESS_COMMAND) {//GEN-LINE:|7-commandAction|7|188-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|8|175-postAction
+                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|8|188-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|9|165-preAction
+            }//GEN-BEGIN:|7-commandAction|9|180-preAction
+        } else if (displayable == chatList) {
+            if (command == List.SELECT_COMMAND) {//GEN-END:|7-commandAction|9|180-preAction
+                // write pre-action user code here
+                chatListAction();//GEN-LINE:|7-commandAction|10|180-postAction
+                // write post-action user code here
+            } else if (command == backChatListCommand) {//GEN-LINE:|7-commandAction|11|185-preAction
+                // write pre-action user code here
+                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|12|185-postAction
+                // write post-action user code here
+            }//GEN-BEGIN:|7-commandAction|13|134-preAction
+        } else if (displayable == chatSendingForm) {
+            if (command == backChatSendingFormComand) {//GEN-END:|7-commandAction|13|134-preAction
+                this.ch = null; // write pre-action user code here
+                switchDisplayable(null, getPeerList());//GEN-LINE:|7-commandAction|14|134-postAction
+
+            } else if (command == sendMessageCommand) {//GEN-LINE:|7-commandAction|15|116-preAction
+                // write pre-action user code here
+//GEN-LINE:|7-commandAction|16|116-postAction
+
+                new Thread(
+                        new Runnable() {
+
+                            public void run() {
+                                int index = GUIClient.this.peerList.getSelectedIndex();
+                                ClientRecord rec = (ClientRecord) peerListVector.elementAt(index);
+                                try {
+                                    GUIClient.this.showAlert("INFO", GUIClient.this.getChatMessageField().getString(), GUIClient.this.getChatSendingForm());
+                                    if (GUIClient.this.ch == null) {
+                                        GUIClient.this.ch = new Chat(rec.bluetoothAddress);
+                                    }
+                                    GUIClient.this.ch.sendChatMessage(GUIClient.this.client.localDevice.getFriendlyName(),
+                                            GUIClient.this.getChatMessageField().getString());
+                                } catch (IOException ex) {
+                                    ex.printStackTrace();
+                                    GUIClient.this.showAlert("Erroorrr", "Can't open chat", GUIClient.this.getPeerList());
+                                }
+
+                            }
+                        }).start();
+                // write post-action user code here
+            }//GEN-BEGIN:|7-commandAction|17|165-preAction
         } else if (displayable == enterBTAddressForm) {
-            if (command == connectCommand) {//GEN-END:|7-commandAction|9|165-preAction
+            if (command == connectCommand) {//GEN-END:|7-commandAction|17|165-preAction
                 // write pre-action user code here
+                /*
                 new Thread(new Runnable() {
 
-                    public void run() {
-                        HubConnector.HUB_BLUETOOTH_ADDRESS = getBtAddressTextField().getString();
-                        client = new BTClient(GUIClient.this);
-                    }
+                public void run() {
+
+                }
                 }).start();
-                switchDisplayable(null, getConnectingtohub());//GEN-LINE:|7-commandAction|10|165-postAction
+                 */
+                switchDisplayable(null, getWelcome());//GEN-LINE:|7-commandAction|18|165-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|11|142-preAction
+            } else if (command == exitApplication) {//GEN-LINE:|7-commandAction|19|178-preAction
+                // write pre-action user code here
+//GEN-LINE:|7-commandAction|20|178-postAction
+
+                destroyApp(false);
+                notifyDestroyed();
+                // write post-action user code here
+            }//GEN-BEGIN:|7-commandAction|21|142-preAction
         } else if (displayable == fileBrowser) {
-            if (command == FileBrowser.SELECT_FILE_COMMAND) {//GEN-END:|7-commandAction|11|142-preAction
+            if (command == FileBrowser.SELECT_FILE_COMMAND) {//GEN-END:|7-commandAction|21|142-preAction
                 // write pre-action user code here
-//GEN-LINE:|7-commandAction|12|142-postAction
+//GEN-LINE:|7-commandAction|22|142-postAction
                 // write post-action user code here
-            } else if (command == Share) {//GEN-LINE:|7-commandAction|13|147-preAction
+            } else if (command == Share) {//GEN-LINE:|7-commandAction|23|147-preAction
                 // write pre-action user code here
-//GEN-LINE:|7-commandAction|14|147-postAction
+//GEN-LINE:|7-commandAction|24|147-postAction
                 System.out.println("Share Command Specified");
                 String name = fileBrowser.getToBeSharedFileName();
                 String fileLocation = fileBrowser.getToBeSharedFileLocation();
@@ -199,27 +259,17 @@ public class GUIClient extends MIDlet implements CommandListener {
 
 
                 // write post-action user code here
-            } else if (command == backCommand7) {//GEN-LINE:|7-commandAction|15|145-preAction
+            } else if (command == backCommand7) {//GEN-LINE:|7-commandAction|25|145-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|16|145-postAction
+                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|26|145-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|17|134-preAction
-        } else if (displayable == form) {
-            if (command == backCommand) {//GEN-END:|7-commandAction|17|134-preAction
-                // write pre-action user code here
-                switchDisplayable(null, getList());//GEN-LINE:|7-commandAction|18|134-postAction
-                // write post-action user code here
-            } else if (command == screenCommand3) {//GEN-LINE:|7-commandAction|19|116-preAction
-                // write pre-action user code here
-//GEN-LINE:|7-commandAction|20|116-postAction
-                // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|21|84-preAction
+            }//GEN-BEGIN:|7-commandAction|27|84-preAction
         } else if (displayable == form1) {
-            if (command == backCommand4) {//GEN-END:|7-commandAction|21|84-preAction
+            if (command == backCommand4) {//GEN-END:|7-commandAction|27|84-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|22|84-postAction
+                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|28|84-postAction
                 // write post-action user code here
-            } else if (command == searchNet) {//GEN-LINE:|7-commandAction|23|82-preAction
+            } else if (command == searchNet) {//GEN-LINE:|7-commandAction|29|82-preAction
                 // write pre-action user code here
 
                 new Thread(new Runnable() {
@@ -230,45 +280,44 @@ public class GUIClient extends MIDlet implements CommandListener {
                         //AlertDisplayer.showAlert("Search", "Searching For " + queryString, this.getDisplay(), this.getForm1());
                         fileLocation = client.musicSearcher.searchMusicFiles(queryString);
 
-
                         client.disconnect();
-
+                        GUIClient.this.searchResults = null;
                         GUIClient.this.showAlert("connected", "Results found " + fileLocation, GUIClient.this.getSearchResults());
                         //AlertDisplayer.showAlert("HI", fileLocation.toString(), null, displayable);
                     }
                 }).start();
 
-//GEN-LINE:|7-commandAction|24|82-postAction
+//GEN-LINE:|7-commandAction|30|82-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|25|47-preAction
-        } else if (displayable == list) {
-            if (command == List.SELECT_COMMAND) {//GEN-END:|7-commandAction|25|47-preAction
+            }//GEN-BEGIN:|7-commandAction|31|47-preAction
+        } else if (displayable == peerList) {
+            if (command == List.SELECT_COMMAND) {//GEN-END:|7-commandAction|31|47-preAction
                 // write pre-action user code here
-                listAction();//GEN-LINE:|7-commandAction|26|47-postAction
+                peerListAction();//GEN-LINE:|7-commandAction|32|47-postAction
                 // write post-action user code here
-            } else if (command == backCommand1) {//GEN-LINE:|7-commandAction|27|59-preAction
+            } else if (command == backCommand1) {//GEN-LINE:|7-commandAction|33|59-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|28|59-postAction
+                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|34|59-postAction
                 // write post-action user code here
-            } else if (command == sendIM) {//GEN-LINE:|7-commandAction|29|89-preAction
+            } else if (command == sendIM) {//GEN-LINE:|7-commandAction|35|89-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getForm());//GEN-LINE:|7-commandAction|30|89-postAction
+                switchDisplayable(null, getChatSendingForm());//GEN-LINE:|7-commandAction|36|89-postAction
                 // write post-action user code here
-            } else if (command == viewFileList) {//GEN-LINE:|7-commandAction|31|87-preAction
+            } else if (command == viewFileList) {//GEN-LINE:|7-commandAction|37|87-preAction
                 // write pre-action user code here
-//GEN-LINE:|7-commandAction|32|87-postAction
+//GEN-LINE:|7-commandAction|38|87-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|33|150-preAction
+            }//GEN-BEGIN:|7-commandAction|39|150-preAction
         } else if (displayable == searchResults) {
-            if (command == List.SELECT_COMMAND) {//GEN-END:|7-commandAction|33|150-preAction
+            if (command == List.SELECT_COMMAND) {//GEN-END:|7-commandAction|39|150-preAction
                 // write pre-action user code here
-                searchResultsAction();//GEN-LINE:|7-commandAction|34|150-postAction
+                searchResultsAction();//GEN-LINE:|7-commandAction|40|150-postAction
                 // write post-action user code here
-            } else if (command == backCommand8) {//GEN-LINE:|7-commandAction|35|153-preAction
+            } else if (command == backCommand8) {//GEN-LINE:|7-commandAction|41|153-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getForm1());//GEN-LINE:|7-commandAction|36|153-postAction
+                switchDisplayable(null, getForm1());//GEN-LINE:|7-commandAction|42|153-postAction
                 // write post-action user code here
-            } else if (command == downloadCommand) {//GEN-LINE:|7-commandAction|37|169-preAction
+            } else if (command == downloadCommand) {//GEN-LINE:|7-commandAction|43|169-preAction
 
 
 
@@ -279,96 +328,40 @@ public class GUIClient extends MIDlet implements CommandListener {
 
 
 
-         /*       new Thread(new Runnable() {
-
-                    public void run() {
-
-                        String abc = searchResults.getString(searchResults.getSelectedIndex());
-                        //client.gui.showAlert("abc", abc, client.gui.getWaitScreen());
-                        if (abc != null) {
-                            System.out.println(abc);
-                            final String btAddress = abc.substring(0, abc.indexOf("@"));
-                            final String location = abc.substring(abc.indexOf("@") + 1);
-
-                            Enumeration e = FileSystemRegistry.listRoots();
-                            final String s = (String) e.nextElement();
 
 
 
-                            FileDownloader fileDownload = new FileDownloader(btAddress, location,
-                                  client.localDevice, GUIClient.this.btClient);
-                            //fileDownload.downloadFileTo(location);
-                            String a = fileDownload.downloadFileTo("e:/Sounds/a.mp3");
-
-                         //   client.gui.showAlert("found", "Device Found with s at " + s + ": " + a, AlertType.INFO, 10000, client.gui.getWaitScreen());
-                        }
-                    }
-                }).start(); */
-
-
-
-                switchDisplayable(null, getWaitScreen());//GEN-LINE:|7-commandAction|38|169-postAction
+                switchDisplayable(null, getWaitScreen());//GEN-LINE:|7-commandAction|44|169-postAction
                 // write post-action user code here
-            } else if (command == preview) {//GEN-LINE:|7-commandAction|39|188-preAction
-                // write pre-action user code here
-                new Thread(new Runnable() {
-
-                    public void run() {
-
-                        String abc = searchResults.getString(searchResults.getSelectedIndex());
-                        //client.gui.showAlert("abc", abc, client.gui.getWaitScreen());
-                        if (abc != null) {
-                            System.out.println(abc);
-                            final String btAddress = abc.substring(0, abc.indexOf("@"));
-                            final String location = abc.substring(abc.indexOf("@") + 1);
-
-                            Enumeration e = FileSystemRegistry.listRoots();
-                            final String s = (String) e.nextElement();
-
-
-
-                            FileDownloader fileDownload = new FileDownloader(btAddress, location,
-                                  client.localDevice, GUIClient.this.btClient);
-                            //fileDownload.downloadFileTo(location);
-                            String a = fileDownload.downloadPreview("e:/Sounds/a.mp3");
-
-                         //   client.gui.showAlert("found", "Device Found with s at " + s + ": " + a, AlertType.INFO, 10000, client.gui.getWaitScreen());
-                        }
-                    }
-                }).start();
-
-
-
-//GEN-LINE:|7-commandAction|40|188-postAction
-                // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|41|182-preAction
+            }//GEN-BEGIN:|7-commandAction|45|176-preAction
         } else if (displayable == waitScreen) {
-            if (command == WaitScreen.FAILURE_COMMAND) {//GEN-END:|7-commandAction|41|182-preAction
+            if (command == WaitScreen.FAILURE_COMMAND) {//GEN-END:|7-commandAction|45|176-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getForm1());//GEN-LINE:|7-commandAction|42|182-postAction
+                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|46|176-postAction
                 // write post-action user code here
-            } else if (command == WaitScreen.SUCCESS_COMMAND) {//GEN-LINE:|7-commandAction|43|181-preAction
+            } else if (command == WaitScreen.SUCCESS_COMMAND) {//GEN-LINE:|7-commandAction|47|175-preAction
                 // write pre-action user code here
-                switchDisplayable(null, getHubConnection());//GEN-LINE:|7-commandAction|44|181-postAction
+                switchDisplayable(null, getSearchResults());//GEN-LINE:|7-commandAction|48|175-postAction
                 // write post-action user code here
-            }//GEN-BEGIN:|7-commandAction|45|7-postCommandAction
-        }//GEN-END:|7-commandAction|45|7-postCommandAction
+            }//GEN-BEGIN:|7-commandAction|49|7-postCommandAction
+        }//GEN-END:|7-commandAction|49|7-postCommandAction
         // write post-action user code here
-    }//GEN-BEGIN:|7-commandAction|46|
-    //</editor-fold>//GEN-END:|7-commandAction|46|
+    }//GEN-BEGIN:|7-commandAction|50|
+    //</editor-fold>//GEN-END:|7-commandAction|50|
+    //</editor-fold>
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitCommand ">//GEN-BEGIN:|18-getter|0|18-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitApplication ">//GEN-BEGIN:|18-getter|0|18-preInit
     /**
-     * Returns an initiliazed instance of exitCommand component.
+     * Returns an initiliazed instance of exitApplication component.
      * @return the initialized component instance
      */
-    public Command getExitCommand() {
-        if (exitCommand == null) {//GEN-END:|18-getter|0|18-preInit
+    public Command getExitApplication() {
+        if (exitApplication == null) {//GEN-END:|18-getter|0|18-preInit
             // write pre-init user code here
-            exitCommand = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|18-getter|1|18-postInit
+            exitApplication = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|18-getter|1|18-postInit
             // write post-init user code here
         }//GEN-BEGIN:|18-getter|2|
-        return exitCommand;
+        return exitApplication;
     }
     //</editor-fold>//GEN-END:|18-getter|2|
 
@@ -399,7 +392,7 @@ public class GUIClient extends MIDlet implements CommandListener {
             HubConnection.append("Search Songs", null);
             HubConnection.append("View Members", null);
             HubConnection.append("Your File System", null);
-            HubConnection.addCommand(getBackCommand());
+            HubConnection.addCommand(getBackChatSendingFormComand());
             HubConnection.setCommandListener(this);
             HubConnection.setSelectedFlags(new boolean[] { false, false, false });//GEN-END:|22-getter|1|22-postInit
             // write post-init user code here
@@ -423,10 +416,23 @@ public class GUIClient extends MIDlet implements CommandListener {
                 // write post-action user code here
             } else if (__selectedString.equals("View Members")) {//GEN-LINE:|22-action|3|41-preAction
 
+                new Thread(new Runnable() {
+
+                    public void run() {
+                        System.out.println("1");
+                        peerListVector = GUIClient.this.client.peerListRequester.getMemberList();
+                        System.out.println("2");
+
+                        GUIClient.this.peerList = null;
+                        GUIClient.this.showAlert("connected", "PeerList: " + peerListVector, GUIClient.this.getPeerList());
+
+
+                    }
+                }).start();
 
 
                 // write pre-action user code here
-                switchDisplayable(null, getList());//GEN-LINE:|22-action|4|41-postAction
+//GEN-LINE:|22-action|4|41-postAction
 
 
                 // write post-action user code here
@@ -500,24 +506,27 @@ public class GUIClient extends MIDlet implements CommandListener {
         return screenCommand2;
     }
     //</editor-fold>//GEN-END:|43-getter|2|
+    //</editor-fold>
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: list ">//GEN-BEGIN:|46-getter|0|46-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: peerList ">//GEN-BEGIN:|46-getter|0|46-preInit
     /**
-     * Returns an initiliazed instance of list component.
+     * Returns an initiliazed instance of peerList component.
      * @return the initialized component instance
      */
-    public List getList() {
-        if (list == null) {//GEN-END:|46-getter|0|46-preInit
+    public List getPeerList() {
+        if (peerList == null) {//GEN-END:|46-getter|0|46-preInit
             // write pre-init user code here
-            String[] arr = {"Amar", "Nayan", "Raju"};
-            list = new List("Active Members ", Choice.IMPLICIT);//GEN-BEGIN:|46-getter|1|46-postInit
-            list.addCommand(getBackCommand1());
-            list.addCommand(getViewFileList());
-            list.addCommand(getSendIM());
-            list.setCommandListener(this);//GEN-END:|46-getter|1|46-postInit
+
+            peerList = new List("Active Members ", Choice.IMPLICIT);//GEN-BEGIN:|46-getter|1|46-postInit
+            peerList.addCommand(getBackCommand1());
+            peerList.addCommand(getViewFileList());
+            peerList.addCommand(getSendIM());
+            peerList.setCommandListener(this);//GEN-END:|46-getter|1|46-postInit
             // write post-init user code here
-            for (int i = 0; i < 3; i++) {
-                list.append(arr[i], null);
+
+            for (int i = 0; i < peerListVector.size(); i++) {
+                ClientRecord temp = (ClientRecord) peerListVector.elementAt(i);
+                peerList.append(temp.friendlyName, null);
             }
             /*Vector clients = client.peerListRequester.getMemberList();
             shared.record.ClientRecord temp;
@@ -527,33 +536,35 @@ public class GUIClient extends MIDlet implements CommandListener {
             list.append(temp.friendlyName, null);
             }*/
         }//GEN-BEGIN:|46-getter|2|
-        return list;
+        return peerList;
     }
     //</editor-fold>//GEN-END:|46-getter|2|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Method: listAction ">//GEN-BEGIN:|46-action|0|46-preAction
+    //<editor-fold defaultstate="collapsed" desc=" Generated Method: peerListAction ">//GEN-BEGIN:|46-action|0|46-preAction
     /**
-     * Performs an action assigned to the selected list element in the list component.
+     * Performs an action assigned to the selected list element in the peerList component.
      */
-    public void listAction() {//GEN-END:|46-action|0|46-preAction
+    public void peerListAction() {//GEN-END:|46-action|0|46-preAction
         // enter pre-action user code here
-        String __selectedString = getList().getString(getList().getSelectedIndex());//GEN-LINE:|46-action|1|46-postAction
+        String __selectedString = getPeerList().getString(getPeerList().getSelectedIndex());//GEN-LINE:|46-action|1|46-postAction
         // enter post-action user code here
     }//GEN-BEGIN:|46-action|2|
     //</editor-fold>//GEN-END:|46-action|2|
+    //</editor-fold>
+    //</editor-fold>
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: backCommand ">//GEN-BEGIN:|54-getter|0|54-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: backChatSendingFormComand ">//GEN-BEGIN:|54-getter|0|54-preInit
     /**
-     * Returns an initiliazed instance of backCommand component.
+     * Returns an initiliazed instance of backChatSendingFormComand component.
      * @return the initialized component instance
      */
-    public Command getBackCommand() {
-        if (backCommand == null) {//GEN-END:|54-getter|0|54-preInit
+    public Command getBackChatSendingFormComand() {
+        if (backChatSendingFormComand == null) {//GEN-END:|54-getter|0|54-preInit
             // write pre-init user code here
-            backCommand = new Command("Back", Command.BACK, 0);//GEN-LINE:|54-getter|1|54-postInit
+            backChatSendingFormComand = new Command("Back", Command.BACK, 0);//GEN-LINE:|54-getter|1|54-postInit
             // write post-init user code here
         }//GEN-BEGIN:|54-getter|2|
-        return backCommand;
+        return backChatSendingFormComand;
     }
     //</editor-fold>//GEN-END:|54-getter|2|
 
@@ -804,53 +815,38 @@ public class GUIClient extends MIDlet implements CommandListener {
     }
     //</editor-fold>//GEN-END:|103-getter|2|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: form ">//GEN-BEGIN:|108-getter|0|108-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: chatSendingForm ">//GEN-BEGIN:|108-getter|0|108-preInit
     /**
-     * Returns an initiliazed instance of form component.
+     * Returns an initiliazed instance of chatSendingForm component.
      * @return the initialized component instance
      */
-    public Form getForm() {
-        if (form == null) {//GEN-END:|108-getter|0|108-preInit
+    public Form getChatSendingForm() {
+        if (chatSendingForm == null) {//GEN-END:|108-getter|0|108-preInit
             // write pre-init user code here
-            form = new Form("IM", new Item[] { getStringItem(), getSpacer2(), getTextField1() });//GEN-BEGIN:|108-getter|1|108-postInit
-            form.addCommand(getScreenCommand3());
-            form.addCommand(getBackCommand());
-            form.setCommandListener(this);//GEN-END:|108-getter|1|108-postInit
+            chatSendingForm = new Form("IM", new Item[] { getSpacer2(), getChatMessageField() });//GEN-BEGIN:|108-getter|1|108-postInit
+            chatSendingForm.addCommand(getSendMessageCommand());
+            chatSendingForm.addCommand(getBackChatSendingFormComand());
+            chatSendingForm.setCommandListener(this);//GEN-END:|108-getter|1|108-postInit
             // write post-init user code here
         }//GEN-BEGIN:|108-getter|2|
-        return form;
+        return chatSendingForm;
     }
     //</editor-fold>//GEN-END:|108-getter|2|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: textField1 ">//GEN-BEGIN:|109-getter|0|109-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: chatMessageField ">//GEN-BEGIN:|109-getter|0|109-preInit
     /**
-     * Returns an initiliazed instance of textField1 component.
+     * Returns an initiliazed instance of chatMessageField component.
      * @return the initialized component instance
      */
-    public TextField getTextField1() {
-        if (textField1 == null) {//GEN-END:|109-getter|0|109-preInit
+    public TextField getChatMessageField() {
+        if (chatMessageField == null) {//GEN-END:|109-getter|0|109-preInit
             // write pre-init user code here
-            textField1 = new TextField("textField1", null, 32, TextField.ANY);//GEN-LINE:|109-getter|1|109-postInit
+            chatMessageField = new TextField("Chat Message", "", 32, TextField.ANY);//GEN-LINE:|109-getter|1|109-postInit
             // write post-init user code here
         }//GEN-BEGIN:|109-getter|2|
-        return textField1;
+        return chatMessageField;
     }
     //</editor-fold>//GEN-END:|109-getter|2|
-
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: stringItem ">//GEN-BEGIN:|111-getter|0|111-preInit
-    /**
-     * Returns an initiliazed instance of stringItem component.
-     * @return the initialized component instance
-     */
-    public StringItem getStringItem() {
-        if (stringItem == null) {//GEN-END:|111-getter|0|111-preInit
-            // write pre-init user code here
-            stringItem = new StringItem("Past Chat", null);//GEN-LINE:|111-getter|1|111-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|111-getter|2|
-        return stringItem;
-    }
-    //</editor-fold>//GEN-END:|111-getter|2|
 
     //<editor-fold defaultstate="collapsed" desc=" Generated Getter: spacer2 ">//GEN-BEGIN:|113-getter|0|113-preInit
     /**
@@ -867,18 +863,18 @@ public class GUIClient extends MIDlet implements CommandListener {
     }
     //</editor-fold>//GEN-END:|113-getter|2|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: screenCommand3 ">//GEN-BEGIN:|115-getter|0|115-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: sendMessageCommand ">//GEN-BEGIN:|115-getter|0|115-preInit
     /**
-     * Returns an initiliazed instance of screenCommand3 component.
+     * Returns an initiliazed instance of sendMessageCommand component.
      * @return the initialized component instance
      */
-    public Command getScreenCommand3() {
-        if (screenCommand3 == null) {//GEN-END:|115-getter|0|115-preInit
+    public Command getSendMessageCommand() {
+        if (sendMessageCommand == null) {//GEN-END:|115-getter|0|115-preInit
             // write pre-init user code here
-            screenCommand3 = new Command("Send", Command.SCREEN, 0);//GEN-LINE:|115-getter|1|115-postInit
+            sendMessageCommand = new Command("Send", Command.SCREEN, 0);//GEN-LINE:|115-getter|1|115-postInit
             // write post-init user code here
         }//GEN-BEGIN:|115-getter|2|
-        return screenCommand3;
+        return sendMessageCommand;
     }
     //</editor-fold>//GEN-END:|115-getter|2|
 
@@ -1003,7 +999,6 @@ public class GUIClient extends MIDlet implements CommandListener {
             searchResults = new List("Search Results", Choice.IMPLICIT);//GEN-BEGIN:|149-getter|1|149-postInit
             searchResults.addCommand(getBackCommand8());
             searchResults.addCommand(getDownloadCommand());
-            searchResults.addCommand(getPreview());
             searchResults.setCommandListener(this);//GEN-END:|149-getter|1|149-postInit
             //  System.out.println(((FileLocation) fileLocation.elementAt(0)).location);
             FileLocation downloadLocation;
@@ -1065,6 +1060,7 @@ public class GUIClient extends MIDlet implements CommandListener {
             // write pre-init user code here
             enterBTAddressForm = new Form("form2", new Item[] { getBtAddressTextField() });//GEN-BEGIN:|158-getter|1|158-postInit
             enterBTAddressForm.addCommand(getConnectCommand());
+            enterBTAddressForm.addCommand(getExitApplication());
             enterBTAddressForm.setCommandListener(this);//GEN-END:|158-getter|1|158-postInit
             // write post-init user code here
         }//GEN-BEGIN:|158-getter|2|
@@ -1118,22 +1114,23 @@ public class GUIClient extends MIDlet implements CommandListener {
     }
     //</editor-fold>//GEN-END:|171-getter|2|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: connectingtohub ">//GEN-BEGIN:|172-getter|0|172-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: waitScreen ">//GEN-BEGIN:|172-getter|0|172-preInit
     /**
-     * Returns an initiliazed instance of connectingtohub component.
+     * Returns an initiliazed instance of waitScreen component.
      * @return the initialized component instance
      */
-    public WaitScreen getConnectingtohub() {
-        if (connectingtohub == null) {//GEN-END:|172-getter|0|172-preInit
+    public WaitScreen getWaitScreen() {
+        if (waitScreen == null) {//GEN-END:|172-getter|0|172-preInit
             // write pre-init user code here
-            connectingtohub = new WaitScreen(getDisplay());//GEN-BEGIN:|172-getter|1|172-postInit
-            connectingtohub.setTitle("waitScreen");
-            connectingtohub.setCommandListener(this);
-            connectingtohub.setText("Connecting to Hub");
-            connectingtohub.setTask(getTask());//GEN-END:|172-getter|1|172-postInit
+            waitScreen = new WaitScreen(getDisplay());//GEN-BEGIN:|172-getter|1|172-postInit
+            waitScreen.setTitle("Please Wait");
+            waitScreen.setTicker(getTicker1());
+            waitScreen.setCommandListener(this);
+            waitScreen.setImage(getImage1());
+            waitScreen.setTask(getTask());//GEN-END:|172-getter|1|172-postInit
             // write post-init user code here
         }//GEN-BEGIN:|172-getter|2|
-        return connectingtohub;
+        return waitScreen;
     }
     //</editor-fold>//GEN-END:|172-getter|2|
 
@@ -1149,7 +1146,28 @@ public class GUIClient extends MIDlet implements CommandListener {
             task.setExecutable(new org.netbeans.microedition.util.Executable() {
                 public void execute() throws Exception {//GEN-END:|177-getter|1|177-execute
                     // write task-execution user code here
-                    client.hubConn = client.hubConnector.connect();
+
+                    String abc = searchResults.getString(searchResults.getSelectedIndex());
+                    //client.gui.showAlert("abc", abc, client.gui.getWaitScreen());
+                    if (abc != null) {
+                        System.out.println(abc);
+                        final String btAddress = abc.substring(0, abc.indexOf("@"));
+                        final String location = abc.substring(abc.indexOf("@") + 1);
+
+                        Enumeration e = FileSystemRegistry.listRoots();
+                        final String s = (String) e.nextElement();
+
+
+
+                        FileDownloader fileDownload = new FileDownloader(btAddress, location,
+                                client.localDevice, GUIClient.this.client);
+                        //fileDownload.downloadFileTo(location);
+
+                        String fileName = location.substring(location.lastIndexOf('/') + 1);
+                        String a = fileDownload.downloadFileTo("e:/sounds/" + fileName);
+
+                        //client.gui.showAlert("found", "Device Found with s at " + s + ": " + a, AlertType.INFO, 10000, client.gui.getWaitScreen());
+                    }
                 }//GEN-BEGIN:|177-getter|2|177-postInit
             });//GEN-END:|177-getter|2|177-postInit
             // write post-init user code here
@@ -1158,89 +1176,159 @@ public class GUIClient extends MIDlet implements CommandListener {
     }
     //</editor-fold>//GEN-END:|177-getter|3|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: waitScreen ">//GEN-BEGIN:|180-getter|0|180-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: chatList ">//GEN-BEGIN:|179-getter|0|179-preInit
     /**
-     * Returns an initiliazed instance of waitScreen component.
+     * Returns an initiliazed instance of chatList component.
      * @return the initialized component instance
      */
-    public WaitScreen getWaitScreen() {
-        if (waitScreen == null) {//GEN-END:|180-getter|0|180-preInit
+    public List getChatList() {
+        if (chatList == null) {//GEN-END:|179-getter|0|179-preInit
             // write pre-init user code here
-            waitScreen = new WaitScreen(getDisplay());//GEN-BEGIN:|180-getter|1|180-postInit
-            waitScreen.setTitle("waitScreen");
-            waitScreen.setCommandListener(this);
-            waitScreen.setText("File Download in Progress..  Please Wait");
-            waitScreen.setTask(getTask1());//GEN-END:|180-getter|1|180-postInit
+            chatList = new List("list", Choice.IMPLICIT);//GEN-BEGIN:|179-getter|1|179-postInit
+            chatList.addCommand(getBackChatListCommand());
+            chatList.setCommandListener(this);//GEN-END:|179-getter|1|179-postInit
             // write post-init user code here
-        }//GEN-BEGIN:|180-getter|2|
-        return waitScreen;
+        }//GEN-BEGIN:|179-getter|2|
+        return chatList;
     }
-    //</editor-fold>//GEN-END:|180-getter|2|
+    //</editor-fold>//GEN-END:|179-getter|2|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: task1 ">//GEN-BEGIN:|183-getter|0|183-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Method: chatListAction ">//GEN-BEGIN:|179-action|0|179-preAction
+    /**
+     * Performs an action assigned to the selected list element in the chatList component.
+     */
+    public void chatListAction() {//GEN-END:|179-action|0|179-preAction
+        // enter pre-action user code here
+        String __selectedString = getChatList().getString(getChatList().getSelectedIndex());//GEN-LINE:|179-action|1|179-postAction
+        // enter post-action user code here
+    }//GEN-BEGIN:|179-action|2|
+    //</editor-fold>//GEN-END:|179-action|2|
+
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: backChatListCommand ">//GEN-BEGIN:|184-getter|0|184-preInit
+    /**
+     * Returns an initiliazed instance of backChatListCommand component.
+     * @return the initialized component instance
+     */
+    public Command getBackChatListCommand() {
+        if (backChatListCommand == null) {//GEN-END:|184-getter|0|184-preInit
+            // write pre-init user code here
+            backChatListCommand = new Command("Back", Command.BACK, 0);//GEN-LINE:|184-getter|1|184-postInit
+            // write post-init user code here
+        }//GEN-BEGIN:|184-getter|2|
+        return backChatListCommand;
+    }
+    //</editor-fold>//GEN-END:|184-getter|2|
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: Welcome ">//GEN-BEGIN:|187-getter|0|187-preInit
+    /**
+     * Returns an initiliazed instance of Welcome component.
+     * @return the initialized component instance
+     */
+    public WaitScreen getWelcome() {
+        if (Welcome == null) {//GEN-END:|187-getter|0|187-preInit
+            // write pre-init user code here
+            Welcome = new WaitScreen(getDisplay());//GEN-BEGIN:|187-getter|1|187-postInit
+            Welcome.setTitle("Welcome");
+            Welcome.setTicker(getTicker());
+            Welcome.setCommandListener(this);
+            Welcome.setImage(getImage());
+            Welcome.setTask(getTask1());//GEN-END:|187-getter|1|187-postInit
+            // write post-init user code here
+        }//GEN-BEGIN:|187-getter|2|
+        return Welcome;
+    }
+    //</editor-fold>//GEN-END:|187-getter|2|
+
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: task1 ">//GEN-BEGIN:|190-getter|0|190-preInit
     /**
      * Returns an initiliazed instance of task1 component.
      * @return the initialized component instance
      */
     public SimpleCancellableTask getTask1() {
-        if (task1 == null) {//GEN-END:|183-getter|0|183-preInit
+        if (task1 == null) {//GEN-END:|190-getter|0|190-preInit
             // write pre-init user code here
-            task1 = new SimpleCancellableTask();//GEN-BEGIN:|183-getter|1|183-execute
+            task1 = new SimpleCancellableTask();//GEN-BEGIN:|190-getter|1|190-execute
             task1.setExecutable(new org.netbeans.microedition.util.Executable() {
-                public void execute() throws Exception {//GEN-END:|183-getter|1|183-execute
+                public void execute() throws Exception {//GEN-END:|190-getter|1|190-execute
                     // write task-execution user code here
-
-
-                        String abc = searchResults.getString(searchResults.getSelectedIndex());
-                        //client.gui.showAlert("abc", abc, client.gui.getWaitScreen());
-                        if (abc != null) {
-                            System.out.println(abc);
-                            final String btAddress = abc.substring(0, abc.indexOf("@"));
-                            final String location = abc.substring(abc.indexOf("@") + 1);
-
-                            Enumeration e = FileSystemRegistry.listRoots();
-                            final String s = (String) e.nextElement();
-
-
-
-                            FileDownloader fileDownload = new FileDownloader(btAddress, location,
-                                  client.localDevice, GUIClient.this.btClient);
-                            //fileDownload.downloadFileTo(location);
-                            String a = fileDownload.downloadFileTo("e:/Sounds/a.mp3");
-
-                         //   client.gui.showAlert("found", "Device Found with s at " + s + ": " + a, AlertType.INFO, 10000, client.gui.getWaitScreen());
-                        }
-
-
-
-
-
-
-                }//GEN-BEGIN:|183-getter|2|183-postInit
-            });//GEN-END:|183-getter|2|183-postInit
+                    HubConnector.HUB_BLUETOOTH_ADDRESS = getBtAddressTextField().getString();
+                    client = new BTClient(GUIClient.this);
+                }//GEN-BEGIN:|190-getter|2|190-postInit
+            });//GEN-END:|190-getter|2|190-postInit
             // write post-init user code here
-        }//GEN-BEGIN:|183-getter|3|
+        }//GEN-BEGIN:|190-getter|3|
         return task1;
     }
-    //</editor-fold>//GEN-END:|183-getter|3|
-    //</editor-fold>
+    //</editor-fold>//GEN-END:|190-getter|3|
 
-    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: preview ">//GEN-BEGIN:|187-getter|0|187-preInit
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: ticker ">//GEN-BEGIN:|193-getter|0|193-preInit
     /**
-     * Returns an initiliazed instance of preview component.
+     * Returns an initiliazed instance of ticker component.
      * @return the initialized component instance
      */
-    public Command getPreview() {
-        if (preview == null) {//GEN-END:|187-getter|0|187-preInit
+    public Ticker getTicker() {
+        if (ticker == null) {//GEN-END:|193-getter|0|193-preInit
             // write pre-init user code here
-            preview = new Command("Preview", Command.OK, 0);//GEN-LINE:|187-getter|1|187-postInit
+            ticker = new Ticker("Connecting to Hub . . . Please Wait . . .");//GEN-LINE:|193-getter|1|193-postInit
             // write post-init user code here
-        }//GEN-BEGIN:|187-getter|2|
-        return preview;
+        }//GEN-BEGIN:|193-getter|2|
+        return ticker;
     }
-    //</editor-fold>//GEN-END:|187-getter|2|
+    //</editor-fold>//GEN-END:|193-getter|2|
 
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: image ">//GEN-BEGIN:|194-getter|0|194-preInit
+    /**
+     * Returns an initiliazed instance of image component.
+     * @return the initialized component instance
+     */
+    public Image getImage() {
+        if (image == null) {//GEN-END:|194-getter|0|194-preInit
+            // write pre-init user code here
+            try {//GEN-BEGIN:|194-getter|1|194-@java.io.IOException
+                image = Image.createImage("/connNeighbors.jpg");
+            } catch (java.io.IOException e) {//GEN-END:|194-getter|1|194-@java.io.IOException
+                e.printStackTrace();
+            }//GEN-LINE:|194-getter|2|194-postInit
+            // write post-init user code here
+        }//GEN-BEGIN:|194-getter|3|
+        return image;
+    }
+    //</editor-fold>//GEN-END:|194-getter|3|
 
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: ticker1 ">//GEN-BEGIN:|198-getter|0|198-preInit
+    /**
+     * Returns an initiliazed instance of ticker1 component.
+     * @return the initialized component instance
+     */
+    public Ticker getTicker1() {
+        if (ticker1 == null) {//GEN-END:|198-getter|0|198-preInit
+            // write pre-init user code here
+            ticker1 = new Ticker("Downloading . . .");//GEN-LINE:|198-getter|1|198-postInit
+            // write post-init user code here
+        }//GEN-BEGIN:|198-getter|2|
+        return ticker1;
+    }
+    //</editor-fold>//GEN-END:|198-getter|2|
+
+    //<editor-fold defaultstate="collapsed" desc=" Generated Getter: image1 ">//GEN-BEGIN:|203-getter|0|203-preInit
+    /**
+     * Returns an initiliazed instance of image1 component.
+     * @return the initialized component instance
+     */
+    public Image getImage1() {
+        if (image1 == null) {//GEN-END:|203-getter|0|203-preInit
+            // write pre-init user code here
+            try {//GEN-BEGIN:|203-getter|1|203-@java.io.IOException
+                image1 = Image.createImage("/wait.jpg");
+            } catch (java.io.IOException e) {//GEN-END:|203-getter|1|203-@java.io.IOException
+                e.printStackTrace();
+            }//GEN-LINE:|203-getter|2|203-postInit
+            // write post-init user code here
+        }//GEN-BEGIN:|203-getter|3|
+        return image1;
+    }
+    //</editor-fold>//GEN-END:|203-getter|3|
 
     /**
      * Returns a display instance.
@@ -1248,6 +1336,8 @@ public class GUIClient extends MIDlet implements CommandListener {
      */
     public Display getDisplay() {
         return Display.getDisplay(this);
+
+
     }
 
     /**
@@ -1255,8 +1345,11 @@ public class GUIClient extends MIDlet implements CommandListener {
      */
     public void exitMIDlet() {
         switchDisplayable(null, null);
-        destroyApp(true);
+        destroyApp(
+                true);
         notifyDestroyed();
+
+
     }
 
     /**
@@ -1266,11 +1359,17 @@ public class GUIClient extends MIDlet implements CommandListener {
     public void startApp() {
         if (midletPaused) {
             resumeMIDlet();
+
+
         } else {
             initialize();
             startMIDlet();
+
+
         }
         midletPaused = false;
+
+
     }
 
     /**
@@ -1278,6 +1377,8 @@ public class GUIClient extends MIDlet implements CommandListener {
      */
     public void pauseApp() {
         midletPaused = true;
+
+
     }
 
     /**
@@ -1285,17 +1386,55 @@ public class GUIClient extends MIDlet implements CommandListener {
      * @param unconditional if true, then the MIDlet has to be unconditionally terminated and all resources has to be released.
      */
     public void destroyApp(boolean unconditional) {
+        HeaderSet hdr = client.hubConn.createHeaderSet();
+        hdr.setHeader(HeaderSet.NAME, client.localDevice.getBluetoothAddress());
+        hdr.setHeader(HeaderSet.DESCRIPTION, client.localDevice.getFriendlyName());
+
+
+        try {
+            client.hubConn.connect(hdr);
+            hdr.setHeader(HeaderSets.REQUEST_TYPE, Types.REQUEST_DISCONNECT);
+            client.hubConn.disconnect(hdr);
+            client.hubConn.close();
+
+
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+
+
+            this.showAlert("exception", ex.getMessage(), peerList);
+
+
+        }
     }
 
     public void showAlert(String title, String message, Displayable disp) {
         showAlert(title, message, AlertType.INFO, 2000, disp);
+
+
     }
 
     public void showAlert(String title, String message, AlertType type,
             int timeOut, Displayable displayable) {
         Alert alert = new Alert(title, message, null, type);
         alert.setTimeout(timeOut);
+
+
         this.getDisplay().setCurrent(alert, displayable);
+
+
+
+    }
+
+    public void addChat(String fromAlias, String msg) {
+        if (chatList == null) {
+
+            chatList = getChatList();
+
+
+        }
+        this.chatList.append("[" + fromAlias + ":] " + msg, null);
 
     }
 }
