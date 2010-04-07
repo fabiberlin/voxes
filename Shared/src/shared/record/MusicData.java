@@ -57,7 +57,7 @@ public class MusicData {
                 Vector artistLoc = (Vector) artistHashTable.get(str);
                 if (artistLoc != null) {
                     for(int i=0 ;i < artistLoc.size();i++){
-                        if(((FileLocation)titleLoc.elementAt(i)).record.isConnected)
+                        if(((FileLocation)artistLoc.elementAt(i)).record.isConnected)
                             search.addElement(artistLoc.elementAt(i));
                     }
                 }
@@ -65,7 +65,7 @@ public class MusicData {
                 Vector albumLoc = (Vector) albumHashTable.get(str);
                 if (albumLoc != null) {
                     for(int i=0 ;i<albumLoc.size();i++){
-                        if(((FileLocation)titleLoc.elementAt(i)).record.isConnected)
+                        if(((FileLocation)albumLoc.elementAt(i)).record.isConnected)
                             search.addElement(albumLoc.elementAt(i));
                     }
                 }

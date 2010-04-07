@@ -12,7 +12,7 @@ import javax.obex.Operation;
 public class FileSink implements DataSink {
 
     private static final int TYPE = 0xFFDEAD;
-    public static final int CHUNK_SIZE = 1024;
+    public static final int CHUNK_SIZE = 1024*30;
 
     /*
     public void consumeData(InputStream iStream, HeaderSet hSet) {
